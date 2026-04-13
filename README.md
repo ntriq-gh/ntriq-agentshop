@@ -55,6 +55,26 @@ x402 Data Intelligence Server (https://x402.ntriq.co.kr)
 Local AI (qwen2.5-vl vision model)
 ```
 
+## Partners & Ecosystem
+
+### AsterPay
+
+**Trust, discovery, and fiat settlement layer for AI agent commerce.**
+
+KYA trust scoring (0-100), source-bounded fact-checking (AI Verify), USDC/EURe → EUR SEPA settlement. ERC-8004 native (Agent #16850).
+
+- Website: [asterpay.io](https://asterpay.io)
+- API docs: [asterpay.io/docs](https://asterpay.io/docs)
+- MCP: `npx -y @asterpay/mcp-server`
+- Demo: [asterpay.io/verify](https://asterpay.io/verify)
+
+ntriq-agentshop is registered on the AsterPay ecosystem as **Agent #16850**. Agents interacting with this server can verify trust scores via:
+
+```bash
+POST https://x402.asterpay.io/v1/agent/trust-score
+Body: { "agent_id": "erc8004:<address>" }
+```
+
 ## Running Locally
 
 ```bash
