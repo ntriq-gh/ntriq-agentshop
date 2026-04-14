@@ -688,7 +688,7 @@ app.post('/content-generate', async (req: Request, res: Response) => {
     const result = await ollamaChat('qwen2.5:7b-instruct-q4_K_M', p, 'You are a professional content writer. Return ONLY valid JSON.');
     let parsed = null;
     try { const m = result.match(/\{[\s\S]*\}/); if (m) parsed = JSON.parse(m[0]); } catch {}
-    res.json({ status: 'ok', style, ...(parsed || { content: result }) });
+    res.json({ status: 'ok', style, ...(parsed || { content: result }), kya_trust: (req as Request & { kyaTrust?: KyaResult | null }).kyaTrust ?? undefined });
   } catch (e: unknown) {
     log({ error: 'content-generate failed', message: (e as Error).message });
     res.status(500).json({ error: 'Content generation failed' });
@@ -711,7 +711,7 @@ Text: ${text}`;
     const result = await ollamaChat('qwen2.5:7b-instruct-q4_K_M', p, `You are a compliance expert. Respond in ${language}. Return ONLY valid JSON.`);
     let parsed = null;
     try { const m = result.match(/\{[\s\S]*\}/); if (m) parsed = JSON.parse(m[0]); } catch {}
-    res.json({ status: 'ok', framework, jurisdiction, ...(parsed || { raw: result }) });
+    res.json({ status: 'ok', framework, jurisdiction, ...(parsed || { raw: result }), kya_trust: (req as Request & { kyaTrust?: KyaResult | null }).kyaTrust ?? undefined });
   } catch (e: unknown) {
     log({ error: 'compliance-check failed', message: (e as Error).message });
     res.status(500).json({ error: 'Compliance check failed' });
@@ -738,7 +738,7 @@ ${code}
     const result = await ollamaChat('qwen2.5:7b-instruct-q4_K_M', p, 'You are a senior code reviewer. Return ONLY valid JSON.');
     let parsed = null;
     try { const m = result.match(/\{[\s\S]*\}/); if (m) parsed = JSON.parse(m[0]); } catch {}
-    res.json({ status: 'ok', language: lang, ...(parsed || { raw: result }) });
+    res.json({ status: 'ok', language: lang, ...(parsed || { raw: result }), kya_trust: (req as Request & { kyaTrust?: KyaResult | null }).kyaTrust ?? undefined });
   } catch (e: unknown) {
     log({ error: 'code-review failed', message: (e as Error).message });
     res.status(500).json({ error: 'Code review failed' });
@@ -766,7 +766,7 @@ app.post('/blueprint', async (req: Request, res: Response) => {
     }).then(r => r.json())) as { analysis?: string };
     let parsed = null;
     try { const m = (result.analysis || '').match(/\{[\s\S]*\}/); if (m) parsed = JSON.parse(m[0]); } catch {}
-    res.json({ status: 'ok', analysis_type, ...(parsed || { analysis: result.analysis }) });
+    res.json({ status: 'ok', analysis_type, ...(parsed || { analysis: result.analysis }), kya_trust: (req as Request & { kyaTrust?: KyaResult | null }).kyaTrust ?? undefined });
   } catch (e: unknown) {
     log({ error: 'blueprint failed', message: (e as Error).message });
     res.status(500).json({ error: 'Blueprint analysis failed' });
@@ -804,7 +804,7 @@ Return JSON: {
     const result = await ollamaChat('qwen2.5:7b-instruct-q4_K_M', p, `You are a cybersecurity expert. Respond in ${language}. Return ONLY valid JSON.`);
     let parsed = null;
     try { const m = result.match(/\{[\s\S]*\}/); if (m) parsed = JSON.parse(m[0]); } catch {}
-    res.json({ status: 'ok', target, dns_info: dnsInfo, ...(parsed || { raw: result }) });
+    res.json({ status: 'ok', target, dns_info: dnsInfo, ...(parsed || { raw: result }), kya_trust: (req as Request & { kyaTrust?: KyaResult | null }).kyaTrust ?? undefined });
   } catch (e: unknown) {
     log({ error: 'phish-radar failed', message: (e as Error).message });
     res.status(500).json({ error: 'Phishing analysis failed' });
@@ -833,7 +833,7 @@ app.post('/content-generate-batch', async (req: Request, res: Response) => {
       } catch { return { index: idx, status: 'error', error: 'processing failed' }; }
     });
     const results = await runConcurrent(tasks, 5);
-    res.json({ status: 'ok', count: results.length, results });
+    res.json({ status: 'ok', count: results.length, results, kya_trust: (req as Request & { kyaTrust?: KyaResult | null }).kyaTrust ?? undefined });
   } catch (e: unknown) {
     log({ error: 'content-generate-batch failed', message: (e as Error).message });
     res.status(500).json({ error: 'Batch content generation failed' });
@@ -856,7 +856,7 @@ app.post('/compliance-check-batch', async (req: Request, res: Response) => {
       } catch { return { index: idx, status: 'error', error: 'processing failed' }; }
     });
     const results = await runConcurrent(tasks, 5);
-    res.json({ status: 'ok', count: results.length, results });
+    res.json({ status: 'ok', count: results.length, results, kya_trust: (req as Request & { kyaTrust?: KyaResult | null }).kyaTrust ?? undefined });
   } catch (e: unknown) {
     log({ error: 'compliance-check-batch failed', message: (e as Error).message });
     res.status(500).json({ error: 'Batch compliance check failed' });
@@ -879,7 +879,7 @@ app.post('/code-review-batch', async (req: Request, res: Response) => {
       } catch { return { index: idx, status: 'error', error: 'processing failed' }; }
     });
     const results = await runConcurrent(tasks, 3);
-    res.json({ status: 'ok', count: results.length, results });
+    res.json({ status: 'ok', count: results.length, results, kya_trust: (req as Request & { kyaTrust?: KyaResult | null }).kyaTrust ?? undefined });
   } catch (e: unknown) {
     log({ error: 'code-review-batch failed', message: (e as Error).message });
     res.status(500).json({ error: 'Batch code review failed' });
@@ -905,7 +905,7 @@ app.post('/blueprint-batch', async (req: Request, res: Response) => {
       } catch { return { image_url: url, status: 'error', error: 'processing failed' }; }
     });
     const results = await runConcurrent(tasks, 5);
-    res.json({ status: 'ok', count: results.length, results });
+    res.json({ status: 'ok', count: results.length, results, kya_trust: (req as Request & { kyaTrust?: KyaResult | null }).kyaTrust ?? undefined });
   } catch (e: unknown) {
     log({ error: 'blueprint-batch failed', message: (e as Error).message });
     res.status(500).json({ error: 'Batch blueprint analysis failed' });
@@ -935,7 +935,7 @@ app.post('/phish-radar-batch', async (req: Request, res: Response) => {
       } catch { return { index: idx, target, status: 'error', error: 'processing failed' }; }
     });
     const results = await runConcurrent(tasks, 10);
-    res.json({ status: 'ok', count: results.length, results });
+    res.json({ status: 'ok', count: results.length, results, kya_trust: (req as Request & { kyaTrust?: KyaResult | null }).kyaTrust ?? undefined });
   } catch (e: unknown) {
     log({ error: 'phish-radar-batch failed', message: (e as Error).message });
     res.status(500).json({ error: 'Batch phishing analysis failed' });
