@@ -55,6 +55,10 @@ const PRICE_MAP: Record<string, number> = {
   "POST /code-review-batch": 15.00,
   "POST /blueprint-batch": 15.00,
   "POST /phish-radar-batch": 9.00,
+  "POST /audio-intel": 0.05,
+  "POST /audio-intel-batch": 9.00,
+  "POST /image-upscale": 0.10,
+  "POST /image-upscale-batch": 30.00,
 };
 
 
@@ -939,6 +943,89 @@ app.post('/phish-radar-batch', async (req: Request, res: Response) => {
   } catch (e: unknown) {
     log({ error: 'phish-radar-batch failed', message: (e as Error).message });
     res.status(500).json({ error: 'Batch phishing analysis failed' });
+  }
+});
+
+
+// 12. Audio Intel
+app.post('/audio-intel', async (req: Request, res: Response) => {
+  try {
+    const { audio_url, audio_base64, language } = req.body;
+    if (!audio_url && !audio_base64) return res.status(400).json({ error: 'audio_url or audio_base64 required' });
+    const body: Record<string, unknown> = { language };
+    if (audio_url) body.audio_url = audio_url; else body.audio_base64 = audio_base64;
+    const result = (await fetch(`${WHISPER_API}/transcribe`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(r => r.json())) as { text?: string; language?: string; duration?: number; segments?: unknown[] };
+    res.json({ status: 'ok', ...result, kya_trust: (req as Request & { kyaTrust?: KyaResult | null }).kyaTrust ?? undefined });
+  } catch (e: unknown) {
+    log({ error: 'audio-intel failed', message: (e as Error).message });
+    res.status(500).json({ error: 'Audio transcription failed' });
+  }
+});
+
+// Audio Intel Batch
+app.post('/audio-intel-batch', async (req: Request, res: Response) => {
+  try {
+    const { audio_urls, language = null } = req.body;
+    if (!Array.isArray(audio_urls) || audio_urls.length === 0) return res.status(400).json({ error: 'audio_urls array required' });
+    if (audio_urls.length > 500) return res.status(400).json({ error: 'max 500 audio files per batch' });
+    const tasks = audio_urls.map((url: string, idx: number) => async () => {
+      try {
+        const result = (await fetch(`${WHISPER_API}/transcribe`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ audio_url: url, language }),
+        }).then(r => r.json())) as { text?: string; language?: string; duration?: number };
+        return { index: idx, audio_url: url, status: 'ok', ...result };
+      } catch { return { index: idx, audio_url: url, status: 'error', error: 'processing failed' }; }
+    });
+    const results = await runConcurrent(tasks, 3);
+    res.json({ status: 'ok', count: results.length, results, kya_trust: (req as Request & { kyaTrust?: KyaResult | null }).kyaTrust ?? undefined });
+  } catch (e: unknown) {
+    log({ error: 'audio-intel-batch failed', message: (e as Error).message });
+    res.status(500).json({ error: 'Batch audio transcription failed' });
+  }
+});
+
+// 13. Image Upscale
+app.post('/image-upscale', async (req: Request, res: Response) => {
+  try {
+    const { image_url, image_base64, scale = 4, mode = 'general' } = req.body;
+    if (!image_url && !image_base64) return res.status(400).json({ error: 'image_url or image_base64 required' });
+    const body: Record<string, unknown> = { scale, mode };
+    if (image_url) body.image_url = image_url; else body.image_base64 = image_base64;
+    const result = (await fetch(`${ESRGAN_API}/upscale`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).then(r => r.json())) as { image_base64?: string; scale?: number; model?: string; format?: string };
+    res.json({ status: 'ok', ...result, kya_trust: (req as Request & { kyaTrust?: KyaResult | null }).kyaTrust ?? undefined });
+  } catch (e: unknown) {
+    log({ error: 'image-upscale failed', message: (e as Error).message });
+    res.status(500).json({ error: 'Image upscale failed' });
+  }
+});
+
+// Image Upscale Batch
+app.post('/image-upscale-batch', async (req: Request, res: Response) => {
+  try {
+    const { images, scale = 4, mode = 'general' } = req.body;
+    if (!Array.isArray(images) || images.length === 0) return res.status(400).json({ error: 'images array required' });
+    if (images.length > 500) return res.status(400).json({ error: 'max 500 images per batch' });
+    const tasks = images.map((url: string, idx: number) => async () => {
+      try {
+        const result = (await fetch(`${ESRGAN_API}/upscale`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image_url: url, scale, mode }),
+        }).then(r => r.json())) as { image_base64?: string; scale?: number; model?: string };
+        return { index: idx, image_url: url, status: 'ok', ...result };
+      } catch { return { index: idx, image_url: url, status: 'error', error: 'processing failed' }; }
+    });
+    const results = await runConcurrent(tasks, 2);
+    res.json({ status: 'ok', count: results.length, results, kya_trust: (req as Request & { kyaTrust?: KyaResult | null }).kyaTrust ?? undefined });
+  } catch (e: unknown) {
+    log({ error: 'image-upscale-batch failed', message: (e as Error).message });
+    res.status(500).json({ error: 'Batch image upscale failed' });
   }
 });
 
